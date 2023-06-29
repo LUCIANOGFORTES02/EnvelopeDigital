@@ -26,10 +26,15 @@ def envelopeDigital ():
 
 
 
-file = open("textoClaro.txt")
-
-data = file.read()
-print (data)
 
 #Gerando chave aleatória
 key =Fernet.generate_key()
+f = Fernet(key)
+
+#Lendo o arquivo em claro
+file = open("textoClaro.txt","rb")
+data = file.read()
+
+#Criptografando o arquivo
+encrypted = f.encrypt(data)
+print (encrypted)
