@@ -28,7 +28,7 @@ def envelopeDigital (arquivoEmClaro,arquivoChavePublica,algoritmoSimetrico):
     message=file.read()#Texto em claro
     file.close()
     
-#Gerar chave simetrica com o algoritmo passado 
+    #Gerar chave simetrica com o algoritmo passado 
     if algoritmoSimetrico =="AES":
 
         key = random.getrandbits(128) # gera uma chave de 128 bits
@@ -44,30 +44,74 @@ def envelopeDigital (arquivoEmClaro,arquivoChavePublica,algoritmoSimetrico):
         message += bytes([pad] * pad)#Preenche
         ciphertext = cipher.encrypt(message)#Criptografando a mensagem
 
-        fileKeyPub=open(arquivoChavePublica,"r")
-        KeyPubDestinatario= RSA.import_key(fileKeyPub.read())
-        #KeyPubDestinatario= fileKeyPub.read()
-        chave_simetrica_cifrada=rsa.encrypt(key,KeyPubDestinatario)#Criptografaando a chave simetrica com a chave pública
-
-
-         # Escrever o envelope criptográfico nos arquivos de saída
-        chave_assinada_arquivo = open('chave_assinada.pem', 'wb')
-        chave_assinada_arquivo.write(chave_simetrica_cifrada)
-        chave_assinada_arquivo.close()
-        
-        arquivo_criptografado= open('arquivo_criptografado', 'wb')
-        arquivo_criptografado.write(ciphertext)
-        arquivo_criptografado.close()
+      
 
     elif algoritmoSimetrico =="DES":
-         pass
+        #FALTA GERAR O ALGORITMO SIMETRICO DES
+        
+        key = random.getrandbits(56) # gera uma chave de 56 bits
+
+        key = key.to_bytes(8, 'big') # converte a chave em bytes
+
+        iv = random.getrandbits(56) # gera um IV de 56 bits
+
+        iv = iv.to_bytes(8, 'big') # converte o IV em bytes
+
+        cipher = DES.new(key, DES.MODE_ECB)
+        pad = 8 - len(message) % 8
+        message += bytes([pad] * pad)
+        
+        ciphertext = cipher.encrypt(message)
+
+
+        
+         
+
     else :
-         pass
+
+        key = random.getrandbits(128) # gera uma chave de 128 bits
+        key = key.to_bytes(16, 'big') # converte a chave em bytes
+        
+        cipher = ARC4.new(key)
+        ciphertext = cipher.encrypt(message)
+
+
+    #Chave Pública do destinatário
+    fileKeyPub=open(arquivoChavePublica,"r")
+    KeyPubDestinatario= RSA.import_key(fileKeyPub.read())#importando a chave pública
+    chave_simetrica_cifrada=rsa.encrypt(key,KeyPubDestinatario)#Criptografaando a chave simetrica com a chave pública
+
+
+    # Escrever o envelope criptográfico nos arquivos de saída
+    chave_assinada_arquivo = open('chave_assinada.pem', 'wb')
+    chave_assinada_arquivo.write(chave_simetrica_cifrada)
+    chave_assinada_arquivo.close()
+    
+    arquivo_criptografado= open('arquivo_criptografado', 'wb')
+    arquivo_criptografado.write(ciphertext)
+    arquivo_criptografado.close()
+         
     
     
     return chave_assinada_arquivo,arquivo_criptografado
 
 
+#Entrada com arquivo da mensagem e a chave criptografada + arquivo da chave rsa do destinatario + Algoritmo simetrico 
+def abrirEnvelope(filemessage,fileKeycrypto,arquivoChavePrivada,algoritmoSimetrico):
+        
+    if algoritmoSimetrico =="AES":
+            pass
+    
+    elif algoritmoSimetrico =="DES":
+        pass
+    
+    else :
+        pass
+             
+
+
+
+    return 0
 
 
 #Gerar uma chave rsa
@@ -80,15 +124,14 @@ with open('chavePublicaDest.pem', 'wb') as chave_assinada_arquivo:
 
 
 
-#Lendo o arquivo em claro
+#Arquivos 
 file= "textoClaro.txt"
 chave_assinada_arquivo='chavePublicaDest.pem'
-algoritmoSimetrico = "AES"
-envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
 
-"""
-while False:
-    print("Escolha o algoritmo simetrico")
+
+#Escolher o algoritmo simétrico
+while 1==1:
+    print("Escolha o algoritmo simetrico que será utilizado")
     print("1-AES")
     print("2-DES")
     print("3-RC4")
@@ -98,15 +141,21 @@ while False:
     if x == '1':
         algoritmoSimetrico = "AES"
         envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
+        abrirEnvelope()
+        print("Deu certo")
 
     elif x == '2':
         algoritmoSimetrico = "DES"
         envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
+        abrirEnvelope()
+
 
     elif x == '3':
         algoritmoSimetrico = "RC4"
         envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
+        abrirEnvelope()
+
 
     else:
-        print("Opcao invalida")1
-"""    
+        print("Opcao invalida")
+    
