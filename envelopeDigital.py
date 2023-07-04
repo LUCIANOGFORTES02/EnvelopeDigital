@@ -16,6 +16,7 @@ Saída
 Dois arquivos um com a chave assinada e outro do arquivo criptografado
 """
 import random
+from Crypto.Cipher import PKCS1_OAEP
 from Crypto.Cipher import AES
 from Crypto.Cipher import DES
 from Crypto.Cipher import ARC4
@@ -24,8 +25,9 @@ import rsa
 
 
 def envelopeDigital (arquivoEmClaro,arquivoChavePublica,algoritmoSimetrico):
+    #Abrindo o arquivo com o texto em claro
     file=open(arquivoEmClaro,"rb")
-    message=file.read()#Texto em claro
+    message=file.read()
     file.close()
     
     #Gerar chave simetrica com o algoritmo passado 
@@ -79,7 +81,7 @@ def envelopeDigital (arquivoEmClaro,arquivoChavePublica,algoritmoSimetrico):
     #Chave Pública do destinatário
     fileKeyPub=open(arquivoChavePublica,"r")
     KeyPubDestinatario= RSA.import_key(fileKeyPub.read())#importando a chave pública
-    chave_simetrica_cifrada=rsa.encrypt(key,KeyPubDestinatario)#Criptografaando a chave simetrica com a chave pública
+    chave_simetrica_cifrada=rsa.encrypt(key,KeyPubDestinatario)#Criptografando a chave simetrica com a chave pública
 
 
     # Escrever o envelope criptográfico nos arquivos de saída
@@ -99,14 +101,47 @@ def envelopeDigital (arquivoEmClaro,arquivoChavePublica,algoritmoSimetrico):
 #Entrada com arquivo da mensagem e a chave criptografada + arquivo da chave rsa do destinatario + Algoritmo simetrico 
 def abrirEnvelope(filemessage,fileKeycrypto,arquivoChavePrivada,algoritmoSimetrico):
         
+
+#1 Abir o arquivo com a chave do destinatário 
+#2 Abrir o arquivo com a chave simétrica criptografada
+#3 Utilizar essa chave para decifrar a chave simétrica
+#4 Decifrar o arquivo criptografado com a chave descriptografada
+
+    iv = random.getrandbits(56) # gera um IV de 56 bits
+    iv = iv.to_bytes(8, 'big') # converte o IV em 
+
+    #Abrindo os arquivos
+    filemessage= open(filemessage.name,"rb")
+    message= filemessage.read()#messagem criptografada
+    filemessage.close()
+    print(message)
+
+    filekeyCrypto= open(fileKeycrypto.name,"rb")
+    keyCrypto =filekeyCrypto.read()#Chave simetrica criptografada
+    #filekeyPrivate = (arquivoChavePrivada,"rb")
+    #keyPrivate=filekeyPrivate.read()
+    keyPrivateDestinatario = RSA.import_key (open (arquivoChavePrivada).read ())#Chave privada do destinatario
+
+
+    # Cria um objeto cifra RSA com o modo PKCS1_OAEP
+    rsa = PKCS1_OAEP.new(keyPrivateDestinatario)
+
+    # Descriptografa a chave simétrica com a chave privada do destinatário
+    chaveSimetrica = rsa.decrypt(keyCrypto)
+
     if algoritmoSimetrico =="AES":
-            pass
+        decipher = AES.new(chaveSimetrica, AES.MODE_CBC, iv)
+        plaintext = decipher.decrypt(message)
+
+
+
     
     elif algoritmoSimetrico =="DES":
         pass
     
     else :
-        pass
+        decipher = ARC4.new(chaveSimetrica)
+        plaintext = decipher.decrypt(message)
              
 
 
@@ -118,16 +153,21 @@ def abrirEnvelope(filemessage,fileKeycrypto,arquivoChavePrivada,algoritmoSimetri
 chavePrivada,chavePublica=rsa.newkeys(2048)#Chaves do destinatario
 
 
-#Criar aqruivo com a chave pública do destinatario
+#Criar arquivo com a chave pública do destinatario 
 with open('chavePublicaDest.pem', 'wb') as chave_assinada_arquivo:
-        chave_assinada_arquivo.write(chavePrivada.save_pkcs1())
+        chave_assinada_arquivo.write(chavePublica.save_pkcs1())
+#Criar arquivo com a chave privada do destinatario 
+with open('chavePrivadaDest.pem', 'wb') as chavePri_assinada_arquivo:
+        chavePri_assinada_arquivo.write(chavePrivada.save_pkcs1())
+
+
 
 
 
 #Arquivos 
 file= "textoClaro.txt"
 chave_assinada_arquivo='chavePublicaDest.pem'
-
+chavePri_assinada_arquivo="chavePrivadaDest.pem"
 
 #Escolher o algoritmo simétrico
 while 1==1:
@@ -140,8 +180,11 @@ while 1==1:
 
     if x == '1':
         algoritmoSimetrico = "AES"
-        envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
-        abrirEnvelope()
+        chave_assinada_arquivo,arquivo_criptografado = envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
+        print (arquivo_criptografado)
+
+
+        abrirEnvelope(arquivo_criptografado,chave_assinada_arquivo,chavePri_assinada_arquivo,algoritmoSimetrico)
         print("Deu certo")
 
     elif x == '2':
