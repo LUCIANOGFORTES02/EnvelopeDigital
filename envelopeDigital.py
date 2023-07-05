@@ -1,6 +1,5 @@
 #Funções: criar um envelope e abir um envelope digital
 
-
 #Criar um envelope
 
 """
@@ -21,7 +20,7 @@ from Crypto.Cipher import AES
 from Crypto.Cipher import DES
 from Crypto.Cipher import ARC4
 from Crypto.PublicKey import RSA #Geração do par de chaves
-import rsa
+
 
 
 def envelopeDigital (arquivoEmClaro,arquivoChavePublica,algoritmoSimetrico):
@@ -79,9 +78,11 @@ def envelopeDigital (arquivoEmClaro,arquivoChavePublica,algoritmoSimetrico):
 
 
     #Chave Pública do destinatário
-    fileKeyPub=open(arquivoChavePublica,"r")
+    fileKeyPub=open(arquivoChavePublica,"rb")
     KeyPubDestinatario= RSA.import_key(fileKeyPub.read())#importando a chave pública
-    chave_simetrica_cifrada=rsa.encrypt(key,KeyPubDestinatario)#Criptografando a chave simetrica com a chave pública
+    rsa = PKCS1_OAEP.new(KeyPubDestinatario)
+
+    chave_simetrica_cifrada=rsa.encrypt(key)#Criptografando a chave simetrica com a chave pública
 
 
     # Escrever o envelope criptográfico nos arquivos de saída
@@ -100,11 +101,11 @@ def envelopeDigital (arquivoEmClaro,arquivoChavePublica,algoritmoSimetrico):
 
 #Entrada com arquivo da mensagem e a chave criptografada + arquivo da chave rsa do destinatario + Algoritmo simetrico 
 def abrirEnvelope(filemessage,fileKeycrypto,arquivoChavePrivada,algoritmoSimetrico):
-        
+
 
 #1 Abir o arquivo com a chave do destinatário 
 #2 Abrir o arquivo com a chave simétrica criptografada
-#3 Utilizar essa chave para decifrar a chave simétrica
+#3 Utilizar essa chave do destinatario para decifrar a chave simétrica
 #4 Decifrar o arquivo criptografado com a chave descriptografada
 
     iv = random.getrandbits(56) # gera um IV de 56 bits
@@ -114,13 +115,13 @@ def abrirEnvelope(filemessage,fileKeycrypto,arquivoChavePrivada,algoritmoSimetri
     filemessage= open(filemessage.name,"rb")
     message= filemessage.read()#messagem criptografada
     filemessage.close()
-    print(message)
+    #print(message)
 
     filekeyCrypto= open(fileKeycrypto.name,"rb")
     keyCrypto =filekeyCrypto.read()#Chave simetrica criptografada
     #filekeyPrivate = (arquivoChavePrivada,"rb")
     #keyPrivate=filekeyPrivate.read()
-    keyPrivateDestinatario = RSA.import_key (open (arquivoChavePrivada).read ())#Chave privada do destinatario
+    keyPrivateDestinatario = RSA.import_key(open (arquivoChavePrivada,"rb").read ())#Chave privada do destinatario
 
 
     # Cria um objeto cifra RSA com o modo PKCS1_OAEP
@@ -130,6 +131,8 @@ def abrirEnvelope(filemessage,fileKeycrypto,arquivoChavePrivada,algoritmoSimetri
     chaveSimetrica = rsa.decrypt(keyCrypto)
 
     if algoritmoSimetrico =="AES":
+        iv = random.getrandbits(128) # gera um IV de 56 bits
+        iv = iv.to_bytes(16, 'big')
         decipher = AES.new(chaveSimetrica, AES.MODE_CBC, iv)
         plaintext = decipher.decrypt(message)
 
@@ -137,37 +140,42 @@ def abrirEnvelope(filemessage,fileKeycrypto,arquivoChavePrivada,algoritmoSimetri
 
     
     elif algoritmoSimetrico =="DES":
-        pass
+        decipher = DES.new(chaveSimetrica, DES.MODE_CBC, iv)
+        plaintext = decipher.decrypt(message)
     
     else :
         decipher = ARC4.new(chaveSimetrica)
         plaintext = decipher.decrypt(message)
              
 
+    #Arquivo com a mensagem descriptografada
+    aquirvoDescriptografado=open('arquivoDescriptografado.txt','wb')
+    aquirvoDescriptografado.write(plaintext)
+    aquirvoDescriptografado.close()
 
-
-    return 0
+    return aquirvoDescriptografado
 
 
 #Gerar uma chave rsa
-chavePrivada,chavePublica=rsa.newkeys(2048)#Chaves do destinatario
 
-
-#Criar arquivo com a chave pública do destinatario 
-with open('chavePublicaDest.pem', 'wb') as chave_assinada_arquivo:
-        chave_assinada_arquivo.write(chavePublica.save_pkcs1())
+key = RSA.generate(2048)
+chavePrivada = key.export_key()
 #Criar arquivo com a chave privada do destinatario 
-with open('chavePrivadaDest.pem', 'wb') as chavePri_assinada_arquivo:
-        chavePri_assinada_arquivo.write(chavePrivada.save_pkcs1())
+file_out = open('private.pem', 'wb')
+file_out .write(chavePrivada)
+file_out.close()
 
-
-
+chavePublica = key.publickey().export_key()
+#Criar arquivo com a chave pública do destinatario 
+file_out=open('public.pem', 'wb')
+file_out.write(chavePublica)
+file_out.close()
 
 
 #Arquivos 
 file= "textoClaro.txt"
-chave_assinada_arquivo='chavePublicaDest.pem'
-chavePri_assinada_arquivo="chavePrivadaDest.pem"
+chave_assinada_arquivo='public.pem'
+chavePri_assinada_arquivo='private.pem'
 
 #Escolher o algoritmo simétrico
 while 1==1:
@@ -181,22 +189,21 @@ while 1==1:
     if x == '1':
         algoritmoSimetrico = "AES"
         chave_assinada_arquivo,arquivo_criptografado = envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
-        print (arquivo_criptografado)
-
-
-        abrirEnvelope(arquivo_criptografado,chave_assinada_arquivo,chavePri_assinada_arquivo,algoritmoSimetrico)
-        print("Deu certo")
+        arquivoDescriptografado = abrirEnvelope(arquivo_criptografado,chave_assinada_arquivo,chavePri_assinada_arquivo,algoritmoSimetrico)
+        
+        file=open(arquivoDescriptografado.name).read()
+        print(file)
 
     elif x == '2':
         algoritmoSimetrico = "DES"
-        envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
-        abrirEnvelope()
+        chave_assinada_arquivo,arquivo_criptografado=envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
+        arquivoDescriptografado = abrirEnvelope(arquivo_criptografado,chave_assinada_arquivo,chavePri_assinada_arquivo,algoritmoSimetrico)
 
 
     elif x == '3':
         algoritmoSimetrico = "RC4"
-        envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
-        abrirEnvelope()
+        chave_assinada_arquivo,arquivo_criptografado=envelopeDigital(file, chave_assinada_arquivo, algoritmoSimetrico)
+        arquivoDescriptografado = abrirEnvelope(arquivo_criptografado,chave_assinada_arquivo,chavePri_assinada_arquivo,algoritmoSimetrico)
 
 
     else:
