@@ -39,7 +39,6 @@ def criar_envelope(arquivo_claro, arquivo_chave_publica, algoritmo_simetrico):
         cifra_simetrica = ARC4.new(chave_simetrica)
    
 
-
     # Cria um objeto cifra RSA com o modo PKCS1_OAEP
     rsa = PKCS1_OAEP.new(chave_publica)
 
@@ -49,8 +48,6 @@ def criar_envelope(arquivo_claro, arquivo_chave_publica, algoritmo_simetrico):
     # Criando o arquivo com a chave assinada
     file_chave_assinada=open("chave_assinada.pem","wb")
     file_chave_assinada=file_chave_assinada.write(chave_simetrica_cifrada)
-
-
    
     # Criando o arquivo criptografado
     file_claro= open(arquivo_claro, "rb")
@@ -93,16 +90,20 @@ def abrir_envelope(arquivo_criptografado, arquivo_chave_cifrada, arquivo_chave_p
     file_criptografado=open(arquivo_criptografado, "rb")
     texto_cifrado = file_criptografado.read()
     texto_decifrado = cifra_simetrica.decrypt(texto_cifrado)
-
-    # Crriando o arquivo decifrado
-    file_decifrado= open("arquivo_decifrado", "wb")
+    
+    arquivo_decifrado = input("Digite o caminho e o nome do arquivo que possuira a mensagem descriptografada:")
+    # Criando o arquivo decifrado
+    file_decifrado= open(arquivo_decifrado, "wb")#"arquivo_decifrado"
     file_decifrado.write(texto_decifrado)
 
     print("Envelope aberto.")
 
 
+textoEmClaro = input("Digite o caminho e o nome do arquivo do texto em claro:")
+
+
 #Criar arquivo em claro
-file_out = open('textoClaro.txt', 'wb')
+file_out = open(textoEmClaro, 'wb')#'textoClaro.txt'
 message=input("Digite a mensagem desejada?")
 message = bytes(message, 'utf-8')# transforma a mensagem(string utf-8 para bytes)
 
@@ -122,9 +123,9 @@ file_out=open('public.pem', 'wb')
 file_out.write(chavePublica)
 file_out.close()
 
-arquivo_claro = "textoClaro.txt"
+arquivo_claro =textoEmClaro #"textoClaro.txt"
 arquivo_chave_publica = "public.pem"
-algoritmo_simetrico = "AES"
+#algoritmo_simetrico = "AES"
 arquivo_criptografado = "arquivo_criptografado"
 arquivo_chave_cifrada = "chave_assinada.pem"
 arquivo_chave_privada = "private.pem"
