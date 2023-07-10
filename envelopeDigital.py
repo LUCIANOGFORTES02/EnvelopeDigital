@@ -16,6 +16,7 @@ Dois arquivos um com a chave assinada e outro do arquivo criptografado
 from Crypto.Cipher import PKCS1_OAEP
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import AES, DES, ARC4
+
 from Crypto.Random import get_random_bytes
 import os
 
